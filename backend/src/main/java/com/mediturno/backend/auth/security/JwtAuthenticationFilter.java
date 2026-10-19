@@ -50,11 +50,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 throw new IllegalArgumentException("El token Bearer está vacío.");
             }
             String email = jwtService.extractUsername(token);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            if (!userDetails.isEnabled() || !jwtService.isTokenValid(token, userDetails)) {
+                throw new IllegalArgumentException("El token no es válido para esta cuenta.");
+            }
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                if (!userDetails.isEnabled() || !jwtService.isTokenValid(token, userDetails)) {
-                    throw new IllegalArgumentException("El token no es válido para esta cuenta.");
-                }
                 UsernamePasswordAuthenticationToken authentication =
                         UsernamePasswordAuthenticationToken.authenticated(
                                 userDetails, null, userDetails.getAuthorities());
