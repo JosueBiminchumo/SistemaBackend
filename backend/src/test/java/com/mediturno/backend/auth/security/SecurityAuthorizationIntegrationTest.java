@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mediturno.backend.user.domain.User;
+import com.mediturno.backend.user.domain.UserRole;
 import com.mediturno.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -30,6 +33,12 @@ class SecurityAuthorizationIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void clearUsers() {
@@ -58,6 +67,18 @@ class SecurityAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/v1/admin/probe")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void allowsAdministratorOnAdminRoute() throws Exception {
+        User admin = userRepository.saveAndFlush(User.create(
+                "Alex", "Admin", "admin@example.com", passwordEncoder.encode("clave-segura"),
+                UserRole.ADMIN, true));
+        String token = jwtService.generateToken(admin);
+
+        mockMvc.perform(get("/api/v1/admin/probe")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
     }
 
     @Test
