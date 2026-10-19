@@ -43,4 +43,24 @@ mvn test
   `ADMIN` en las rutas de los otros roles).
 - Las contraseñas se almacenan con BCrypt. El hash nunca forma parte de las respuestas.
 
+El registro se puede deshabilitar en despliegues existentes con
+`AUTH_REGISTRATION_ENABLED=false`. La duración del token se configura con
+`JWT_EXPIRATION_MS` (por defecto, una hora).
+
+Ejemplo de registro:
+
+```json
+{
+  "firstName": "Ana",
+  "lastName": "Pérez",
+  "email": "ana@example.com",
+  "password": "una-clave-segura"
+}
+```
+
+El registro responde `201 Created` y crea siempre el rol `PATIENT`; un campo
+`role` enviado por el cliente no se utiliza. El login responde `200 OK`,
+`401 Unauthorized` corresponde a credenciales inválidas y `409 Conflict` a un
+correo ya registrado.
+
 La política de CORS y la documentación Swagger se coordinan con el integrante 7.
