@@ -85,11 +85,30 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("ana@example.com")).thenReturn(false);
         when(passwordEncoder.encode("clave-segura")).thenReturn("bcrypt-hash");
         when(userRepository.saveAndFlush(any(User.class)))
-                .thenThrow(new DataIntegrityViolationException("unique email"));
+                .thenThrow(new DataIntegrityViolationException(
+                        "unique email",
+                        new org.hibernate.exception.ConstraintViolationException(
+                                "unique email", null, "uk_users_email")));
 
         assertThatThrownBy(() -> authService.register(
                 new RegisterRequest("Ana", "Pérez", "ana@example.com", "clave-segura")))
                 .isInstanceOf(EmailAlreadyRegisteredException.class);
+    }
+
+    @Test
+    void doesNotMisreportUnrelatedDatabaseConstraintFailuresAsDuplicateEmails() {
+        when(userRepository.existsByEmail("ana@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("clave-segura")).thenReturn("bcrypt-hash");
+        when(userRepository.saveAndFlush(any(User.class)))
+                .thenThrow(new DataIntegrityViolationException(
+                        "other constraint",
+                        new org.hibernate.exception.ConstraintViolationException(
+                                "other constraint", null, "chk_users_role")));
+
+        assertThatThrownBy(() -> authService.register(
+                new RegisterRequest("Ana", "Pérez", "ana@example.com", "clave-segura")))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("other constraint");
     }
 
     @Test
