@@ -15,3 +15,9 @@ El sistema cuenta con accesos diferenciados para tres tipos de usuarios[cite: 1]
 * **Paciente:** Consulta médicos y horarios; reserva, cancela o reprograma citas; revisa su historial[cite: 1].
 * **Médico:** Administra su disponibilidad, consulta su agenda y actualiza el estado de las citas[cite: 1].
 * **Administrador:** Gestiona usuarios, médicos, pacientes, especialidades y citas; consulta indicadores básicos[cite: 1].
+
+## Backend
+
+El servicio Java/Spring Boot está en [`backend/`](./backend/README.md). Allí se
+documentan los requisitos locales, las variables de entorno y las rutas iniciales
+de autenticación.
