@@ -90,6 +90,16 @@ class AuthApiIntegrationTest {
     }
 
     @Test
+    void returnsStandardErrorForMalformedJsonBody() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("El cuerpo de la solicitud no es válido."))
+                .andExpect(jsonPath("$.path").value("/api/v1/auth/login"));
+    }
+
+    @Test
     void logsInWithRegisteredCredentials() throws Exception {
         register("ana@example.com");
 
