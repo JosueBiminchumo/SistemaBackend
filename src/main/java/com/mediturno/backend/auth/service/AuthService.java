@@ -18,6 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.hibernate.exception.ConstraintViolationException;
 
 @Service
 public class AuthService {
@@ -60,7 +61,10 @@ public class AuthService {
         try {
             return createResponse(userRepository.saveAndFlush(patient));
         } catch (DataIntegrityViolationException exception) {
-            throw new EmailAlreadyRegisteredException();
+            if (isEmailUniqueConstraintViolation(exception)) {
+                throw new EmailAlreadyRegisteredException();
+            }
+            throw exception;
         }
     }
 
@@ -83,5 +87,14 @@ public class AuthService {
 
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isEmailUniqueConstraintViolation(Throwable exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException violation) {
+                return "uk_users_email".equalsIgnoreCase(violation.getConstraintName());
+            }
+        }
+        return false;
     }
 }
