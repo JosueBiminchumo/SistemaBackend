@@ -55,6 +55,17 @@ class AuthApiIntegrationTest {
     }
 
     @Test
+    void ignoresRoleSuppliedByPublicRegistrationClient() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"clave-segura","role":"ADMIN"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.user.role").value("PATIENT"));
+    }
+
+    @Test
     void returnsConflictWhenEmailAlreadyExistsIgnoringCase() throws Exception {
         register("ANA@example.com");
 
