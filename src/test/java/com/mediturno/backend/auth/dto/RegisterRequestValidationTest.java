@@ -42,4 +42,14 @@ class RegisterRequestValidationTest {
                 .collect(java.util.stream.Collectors.toSet());
         assertThat(invalidFields).contains("email", "password");
     }
+
+    @Test
+    void rejectsPasswordWhoseUtf8BytesExceedBcryptLimit() {
+        RegisterRequest request = new RegisterRequest(
+                "Ana", "Pérez", "ana@example.com", "🔐".repeat(19));
+
+        assertThat(validator.validate(request))
+                .extracting(error -> error.getPropertyPath().toString())
+                .contains("password");
+    }
 }
