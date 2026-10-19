@@ -10,6 +10,7 @@ import javax.crypto.SecretKey;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,7 +57,11 @@ public class JwtService {
     }
 
     public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+        String subject = extractClaim(token, Claims::getSubject);
+        if (subject == null || subject.isBlank()) {
+            throw new MalformedJwtException("El token no contiene un sujeto válido.");
+        }
+        return subject;
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
