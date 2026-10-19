@@ -67,6 +67,23 @@ class SecurityAuthorizationIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void rejectsExpiredBearerToken() throws Exception {
+        mockMvc.perform(get("/api/v1/patients/probe")
+                        .header("Authorization", "Bearer "
+                                + SignedJwtTestTokens.expiredTokenFor("ana@example.com")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rejectsTokenWithTamperedSignature() throws Exception {
+        String token = SignedJwtTestTokens.tamperSignature(registerAndGetToken());
+
+        mockMvc.perform(get("/api/v1/patients/probe")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
     private String registerAndGetToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
