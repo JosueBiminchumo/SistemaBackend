@@ -2,6 +2,7 @@ package com.mediturno.backend.auth.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDate;
 import java.util.Set;
 
 import jakarta.validation.Validation;
@@ -26,30 +27,44 @@ class RegisterRequestValidationTest {
         validatorFactory.close();
     }
 
+    private RegisterRequest validRequest(String email, String password) {
+        return new RegisterRequest(
+                "Ana",
+                "Pérez",
+                "12345678",
+                LocalDate.of(2000, 1, 1),
+                "987654321",
+                email,
+                password);
+    }
+
     @Test
     void acceptsValidPatientRegistrationData() {
-        RegisterRequest request = new RegisterRequest("Ana", "Pérez", "ana@example.com", "clave-segura");
+        RegisterRequest request = validRequest("ana@example.com", "clave-segura");
 
         assertThat(validator.validate(request)).isEmpty();
     }
 
     @Test
     void rejectsWeakPasswordAndMalformedEmail() {
-        RegisterRequest request = new RegisterRequest("Ana", "Pérez", "no-es-email", "123");
+        RegisterRequest request = validRequest("no-es-email", "123");
 
         Set<String> invalidFields = validator.validate(request).stream()
                 .map(error -> error.getPropertyPath().toString())
                 .collect(java.util.stream.Collectors.toSet());
+
         assertThat(invalidFields).contains("email", "password");
     }
 
     @Test
     void rejectsPasswordWhoseUtf8BytesExceedBcryptLimit() {
-        RegisterRequest request = new RegisterRequest(
-                "Ana", "Pérez", "ana@example.com", "🔐".repeat(19));
+        String password = "á".repeat(37);
+        RegisterRequest request = validRequest("ana@example.com", password);
 
-        assertThat(validator.validate(request))
-                .extracting(error -> error.getPropertyPath().toString())
-                .contains("password");
+        Set<String> invalidFields = validator.validate(request).stream()
+                .map(error -> error.getPropertyPath().toString())
+                .collect(java.util.stream.Collectors.toSet());
+
+        assertThat(invalidFields).contains("password");
     }
 }

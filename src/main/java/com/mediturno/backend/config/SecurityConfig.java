@@ -27,12 +27,18 @@ public class SecurityConfig {
             RestAccessDeniedHandler accessDeniedHandler) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> {})
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(
+                               "/swagger-ui.html",
+                                      "/swagger-ui/**",
+                                     "/v3/api-docs/**"
+                               ).permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/register").permitAll()

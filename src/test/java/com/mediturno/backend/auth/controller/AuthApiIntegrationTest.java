@@ -1,5 +1,7 @@
 package com.mediturno.backend.auth.controller;
 
+
+import com.mediturno.backend.patient.repository.PatientRepository;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -29,6 +31,9 @@ class AuthApiIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
+    private PatientRepository patientRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -39,6 +44,7 @@ class AuthApiIntegrationTest {
 
     @BeforeEach
     void clearUsers() {
+        patientRepository.deleteAll();
         userRepository.deleteAll();
     }
 
@@ -47,7 +53,7 @@ class AuthApiIntegrationTest {
         MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"clave-segura"}
+                                {"firstName":"Ana","lastName":"Pérez","documentNumber":"12345678","birthDate":"2000-01-01","phone":"987654321","email":"ana@example.com","password":"clave-segura"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.user.role").value("PATIENT"))
@@ -65,7 +71,7 @@ class AuthApiIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"clave-segura","role":"ADMIN"}
+                                {"firstName":"Ana","lastName":"Pérez","documentNumber":"12345678","birthDate":"2000-01-01","phone":"987654321","email":"ana@example.com","password":"clave-segura","role":"ADMIN"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.user.role").value("PATIENT"));
@@ -78,7 +84,7 @@ class AuthApiIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Otra","lastName":"Persona","email":"ana@example.com","password":"clave-segura"}
+                                {"firstName":"Otra","lastName":"Persona","documentNumber":"12345678","birthDate":"2000-01-01","phone":"987654321","email":"ana@example.com","password":"clave-segura"}
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409));
@@ -151,10 +157,10 @@ class AuthApiIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new RegistrationPayload("Ana", "Pérez", email, "clave-segura"))))
+                                new RegistrationPayload("Ana", "Perez", "12345678", "2000-01-01", "987654321", email, "clave-segura"))))
                 .andExpect(status().isCreated());
     }
 
-    private record RegistrationPayload(String firstName, String lastName, String email, String password) {
+    private record RegistrationPayload(String firstName, String lastName, String documentNumber, String birthDate, String phone, String email, String password) {
     }
 }
