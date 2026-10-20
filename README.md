@@ -49,6 +49,8 @@ El registro recibe `firstName`, `lastName`, `documentNumber`, `birthDate`, `phon
 
 El registro puede deshabilitarse con `AUTH_REGISTRATION_ENABLED=false`. La duración del JWT se configura con `JWT_EXPIRATION_MS` (por defecto, una hora).
 
+Los datos inválidos responden `400`; un correo o DNI ya registrado responde `409`; si no existe el perfil asociado al usuario autenticado, responde `404`.
+
 Ejemplo de registro:
 
 ```json

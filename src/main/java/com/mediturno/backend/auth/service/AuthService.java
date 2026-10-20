@@ -10,6 +10,7 @@ import com.mediturno.backend.auth.exception.EmailAlreadyRegisteredException;
 import com.mediturno.backend.auth.exception.RegistrationDisabledException;
 import com.mediturno.backend.auth.security.JwtService;
 import com.mediturno.backend.patient.domain.Patient;
+import com.mediturno.backend.patient.exception.DocumentNumberAlreadyRegisteredException;
 import com.mediturno.backend.patient.repository.PatientRepository;
 import com.mediturno.backend.user.domain.User;
 import com.mediturno.backend.user.repository.UserRepository;
@@ -57,6 +58,10 @@ public class AuthService {
         if (userRepository.existsByEmail(email)) {
             throw new EmailAlreadyRegisteredException();
         }
+        String documentNumber = request.documentNumber().trim();
+        if (patientRepository.existsByDocumentNumber(documentNumber)) {
+            throw new DocumentNumberAlreadyRegisteredException();
+        }
 
         User user = User.createPatient(
                 request.firstName().trim(),
@@ -67,13 +72,16 @@ public class AuthService {
             User savedUser = userRepository.saveAndFlush(user);
             patientRepository.saveAndFlush(Patient.create(
                     savedUser,
-                    request.documentNumber().trim(),
+                    documentNumber,
                     request.birthDate(),
                     request.phone().trim()));
             return createResponse(savedUser);
         } catch (DataIntegrityViolationException exception) {
             if (isEmailUniqueConstraintViolation(exception)) {
                 throw new EmailAlreadyRegisteredException();
+            }
+            if (isDocumentNumberUniqueConstraintViolation(exception)) {
+                throw new DocumentNumberAlreadyRegisteredException();
             }
             throw exception;
         }
@@ -101,9 +109,17 @@ public class AuthService {
     }
 
     private boolean isEmailUniqueConstraintViolation(Throwable exception) {
+        return hasConstraintViolation(exception, "uk_users_email");
+    }
+
+    private boolean isDocumentNumberUniqueConstraintViolation(Throwable exception) {
+        return hasConstraintViolation(exception, "uk_patients_document_number");
+    }
+
+    private boolean hasConstraintViolation(Throwable exception, String constraintName) {
         for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
             if (cause instanceof ConstraintViolationException violation) {
-                return "uk_users_email".equalsIgnoreCase(violation.getConstraintName());
+                return constraintName.equalsIgnoreCase(violation.getConstraintName());
             }
         }
         return false;
