@@ -2,6 +2,7 @@ package com.mediturno.backend.auth.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDate;
 import java.util.Set;
 
 import jakarta.validation.Validation;
@@ -28,14 +29,28 @@ class RegisterRequestValidationTest {
 
     @Test
     void acceptsValidPatientRegistrationData() {
-        RegisterRequest request = new RegisterRequest("Ana", "Pérez", "ana@example.com", "clave-segura");
+        RegisterRequest request = new RegisterRequest(
+                "Ana",
+                "Pérez",
+                "12345678",
+                LocalDate.of(1998, 4, 12),
+                "987654321",
+                "ana@example.com",
+                "clave-segura");
 
         assertThat(validator.validate(request)).isEmpty();
     }
 
     @Test
     void rejectsWeakPasswordAndMalformedEmail() {
-        RegisterRequest request = new RegisterRequest("Ana", "Pérez", "no-es-email", "123");
+        RegisterRequest request = new RegisterRequest(
+                "Ana",
+                "Pérez",
+                "12345678",
+                LocalDate.of(1998, 4, 12),
+                "987654321",
+                "no-es-email",
+                "123");
 
         Set<String> invalidFields = validator.validate(request).stream()
                 .map(error -> error.getPropertyPath().toString())
@@ -46,7 +61,13 @@ class RegisterRequestValidationTest {
     @Test
     void rejectsPasswordWhoseUtf8BytesExceedBcryptLimit() {
         RegisterRequest request = new RegisterRequest(
-                "Ana", "Pérez", "ana@example.com", "🔐".repeat(19));
+                "Ana",
+                "Pérez",
+                "12345678",
+                LocalDate.of(1998, 4, 12),
+                "987654321",
+                "ana@example.com",
+                "🔐".repeat(19));
 
         assertThat(validator.validate(request))
                 .extracting(error -> error.getPropertyPath().toString())
