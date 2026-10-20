@@ -1,7 +1,6 @@
 package com.mediturno.backend.auth.security;
 
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Date;
 
 import io.jsonwebtoken.Jwts;

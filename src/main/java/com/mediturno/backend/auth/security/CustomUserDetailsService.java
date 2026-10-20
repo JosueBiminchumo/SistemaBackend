@@ -2,7 +2,6 @@ package com.mediturno.backend.auth.security;
 
 import java.util.Locale;
 
-import com.mediturno.backend.user.domain.User;
 import com.mediturno.backend.user.repository.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
