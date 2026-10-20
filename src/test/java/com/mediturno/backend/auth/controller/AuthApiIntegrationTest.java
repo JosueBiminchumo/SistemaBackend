@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mediturno.backend.patient.repository.PatientRepository;
 import com.mediturno.backend.user.domain.User;
 import com.mediturno.backend.user.domain.UserRole;
 import com.mediturno.backend.user.repository.UserRepository;
@@ -32,6 +33,9 @@ class AuthApiIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private PatientRepository patientRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -39,6 +43,7 @@ class AuthApiIntegrationTest {
 
     @BeforeEach
     void clearUsers() {
+        patientRepository.deleteAll();
         userRepository.deleteAll();
     }
 
@@ -47,7 +52,7 @@ class AuthApiIntegrationTest {
         MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"clave-segura"}
+                                {"firstName":"Ana","lastName":"Pérez","documentNumber":"12345678","birthDate":"1998-04-12","phone":"987654321","email":"ana@example.com","password":"clave-segura"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.user.role").value("PATIENT"))
@@ -58,6 +63,7 @@ class AuthApiIntegrationTest {
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
         org.assertj.core.api.Assertions.assertThat(body.has("passwordHash")).isFalse();
         org.assertj.core.api.Assertions.assertThat(body.toString()).doesNotContain("clave-segura");
+        org.assertj.core.api.Assertions.assertThat(patientRepository.count()).isEqualTo(1);
     }
 
     @Test
@@ -65,7 +71,7 @@ class AuthApiIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"clave-segura","role":"ADMIN"}
+                                {"firstName":"Ana","lastName":"Pérez","documentNumber":"12345678","birthDate":"1998-04-12","phone":"987654321","email":"ana@example.com","password":"clave-segura","role":"ADMIN"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.user.role").value("PATIENT"));
@@ -78,7 +84,7 @@ class AuthApiIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Otra","lastName":"Persona","email":"ana@example.com","password":"clave-segura"}
+                                {"firstName":"Otra","lastName":"Persona","documentNumber":"12345678","birthDate":"1998-04-12","phone":"987654321","email":"ana@example.com","password":"clave-segura"}
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409));
@@ -89,7 +95,7 @@ class AuthApiIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"","lastName":"Persona","email":"correo-inválido","password":"123"}
+                                {"firstName":"","lastName":"Persona","documentNumber":"12345678","birthDate":"1998-04-12","phone":"987654321","email":"correo-inválido","password":"123"}
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.details").isMap());
@@ -151,10 +157,19 @@ class AuthApiIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new RegistrationPayload("Ana", "Pérez", email, "clave-segura"))))
+                                new RegistrationPayload(
+                                        "Ana", "Pérez", "12345678", "1998-04-12", "987654321", email,
+                                        "clave-segura"))))
                 .andExpect(status().isCreated());
     }
 
-    private record RegistrationPayload(String firstName, String lastName, String email, String password) {
+    private record RegistrationPayload(
+            String firstName,
+            String lastName,
+            String documentNumber,
+            String birthDate,
+            String phone,
+            String email,
+            String password) {
     }
 }
