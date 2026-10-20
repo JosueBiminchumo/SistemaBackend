@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { login, roleToHomeRoute } from '../../services/authService';
 
 const testUsers = [
   {
@@ -41,6 +42,7 @@ export default function LoginForm({ onLogin }) {
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedUser = useMemo(
     () => testUsers.find((user) => user.email === values.email),
@@ -85,7 +87,7 @@ export default function LoginForm({ onLogin }) {
     return nextErrors;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const nextErrors = validate();
 
@@ -96,42 +98,41 @@ export default function LoginForm({ onLogin }) {
 
     const email = values.email.trim().toLowerCase();
 
-    const registeredPatient = JSON.parse(
-      localStorage.getItem('mediturn_registered_patient') || 'null'
+    const localUser = testUsers.find(
+      (testUser) => testUser.email === email && testUser.password === values.password
     );
 
-    const user =
-      registeredPatient &&
-      registeredPatient.email === email &&
-      registeredPatient.password === values.password
-        ? {
-            id: registeredPatient.id,
-            name: `${registeredPatient.firstName} ${registeredPatient.lastName}`,
-            email: registeredPatient.email,
-            role: registeredPatient.role,
-            dashboardPath: '/paciente',
-          }
-        : testUsers.find(
-            (testUser) =>
-              testUser.email === email &&
-              testUser.password === values.password
-          );
+    setIsSubmitting(true);
+    try {
+      if (localUser) {
+        onLogin({
+          ...localUser,
+          remember: values.remember,
+          isLocal: true,
+        });
+        return;
+      }
 
-    if (!user) {
-      setErrors({
-        password: 'Credenciales incorrectas. Revisa el correo y la contrasena.',
+      const response = await login({ email, password: values.password });
+      const user = response.user;
+      onLogin({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role: user.role,
+        dashboardPath: roleToHomeRoute(user.role),
+        remember: values.remember,
+        isLocal: false,
       });
-      return;
+    } catch (error) {
+      setErrors({
+        password: error.message || 'Credenciales incorrectas. Revisa tus datos.',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    onLogin({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      dashboardPath: user.dashboardPath,
-      remember: values.remember,
-    });
   };
 
   return (
@@ -193,11 +194,15 @@ export default function LoginForm({ onLogin }) {
           />
           <span>Recordarme</span>
         </label>
-        <span className="muted-link">Acceso local</span>
+        <span className="muted-link">Acceso seguro</span>
       </div>
 
-      <button className="button button--primary button--full" type="submit">
-        Iniciar sesion
+      <button
+        className="button button--primary button--full"
+        disabled={isSubmitting}
+        type="submit"
+      >
+        {isSubmitting ? 'Ingresando...' : 'Iniciar sesión'}
       </button>
 
       {selectedUser && (

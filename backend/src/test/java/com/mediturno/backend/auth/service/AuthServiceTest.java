@@ -7,6 +7,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Field;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import com.mediturno.backend.auth.dto.AuthResponse;
@@ -15,6 +17,8 @@ import com.mediturno.backend.auth.dto.RegisterRequest;
 import com.mediturno.backend.auth.exception.EmailAlreadyRegisteredException;
 import com.mediturno.backend.auth.exception.RegistrationDisabledException;
 import com.mediturno.backend.auth.security.JwtService;
+import com.mediturno.backend.patient.domain.Patient;
+import com.mediturno.backend.patient.repository.PatientRepository;
 import com.mediturno.backend.user.domain.User;
 import com.mediturno.backend.user.domain.UserRole;
 import com.mediturno.backend.user.repository.UserRepository;
@@ -35,6 +39,9 @@ class AuthServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private PatientRepository patientRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
@@ -47,16 +54,31 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, passwordEncoder, authenticationManager, jwtService, true);
+        authService = new AuthService(
+                userRepository,
+                patientRepository,
+                passwordEncoder,
+                authenticationManager,
+                jwtService,
+                true);
     }
 
     @Test
-    void registersPatientWithNormalizedEmailAndEncodedPassword() {
-        RegisterRequest request = new RegisterRequest(" Ana ", " Pérez ", "ANA@EXAMPLE.COM ", "clave-segura");
+    void registersPatientWithNormalizedEmailAndEncodedPassword() throws Exception {
+        RegisterRequest request = new RegisterRequest(
+                " Ana ",
+                " Pérez ",
+                "12345678",
+                LocalDate.of(1998, 5, 20),
+                "987654321",
+                "ANA@EXAMPLE.COM ",
+                "clave-segura");
         when(userRepository.existsByEmail("ana@example.com")).thenReturn(false);
         when(passwordEncoder.encode("clave-segura")).thenReturn("bcrypt-hash");
-        when(userRepository.saveAndFlush(any(User.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        User savedUser = User.createPatient("Ana", "Pérez", "ana@example.com", "bcrypt-hash");
+        setId(savedUser, 42L);
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
+        when(patientRepository.saveAndFlush(any(Patient.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(jwtService.generateToken(any(User.class))).thenReturn("jwt-token");
         when(jwtService.getExpirationMillis()).thenReturn(3_600_000L);
 
@@ -67,6 +89,7 @@ class AuthServiceTest {
         assertThat(response.user().email()).isEqualTo("ana@example.com");
         assertThat(response.user().role()).isEqualTo(UserRole.PATIENT);
         verify(passwordEncoder).encode("clave-segura");
+        verify(patientRepository).saveAndFlush(any(Patient.class));
     }
 
     @Test
@@ -74,7 +97,14 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("ana@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(
-                new RegisterRequest("Ana", "Pérez", "ANA@example.com", "clave-segura")))
+                new RegisterRequest(
+                        "Ana",
+                        "Pérez",
+                        "12345678",
+                        LocalDate.of(1998, 5, 20),
+                        "987654321",
+                        "ANA@example.com",
+                        "clave-segura")))
                 .isInstanceOf(EmailAlreadyRegisteredException.class);
         verify(passwordEncoder, never()).encode(any());
         verify(userRepository, never()).saveAndFlush(any(User.class));
@@ -91,7 +121,14 @@ class AuthServiceTest {
                                 "unique email", null, "uk_users_email")));
 
         assertThatThrownBy(() -> authService.register(
-                new RegisterRequest("Ana", "Pérez", "ana@example.com", "clave-segura")))
+                new RegisterRequest(
+                        "Ana",
+                        "Pérez",
+                        "12345678",
+                        LocalDate.of(1998, 5, 20),
+                        "987654321",
+                        "ana@example.com",
+                        "clave-segura")))
                 .isInstanceOf(EmailAlreadyRegisteredException.class);
     }
 
@@ -106,7 +143,14 @@ class AuthServiceTest {
                                 "other constraint", null, "chk_users_role")));
 
         assertThatThrownBy(() -> authService.register(
-                new RegisterRequest("Ana", "Pérez", "ana@example.com", "clave-segura")))
+                new RegisterRequest(
+                        "Ana",
+                        "Pérez",
+                        "12345678",
+                        LocalDate.of(1998, 5, 20),
+                        "987654321",
+                        "ana@example.com",
+                        "clave-segura")))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("other constraint");
     }
@@ -114,10 +158,22 @@ class AuthServiceTest {
     @Test
     void refusesRegistrationWhenPublicRegistrationIsDisabled() {
         AuthService disabledService = new AuthService(
-                userRepository, passwordEncoder, authenticationManager, jwtService, false);
+                userRepository,
+                patientRepository,
+                passwordEncoder,
+                authenticationManager,
+                jwtService,
+                false);
 
         assertThatThrownBy(() -> disabledService.register(
-                new RegisterRequest("Ana", "Pérez", "ana@example.com", "clave-segura")))
+                new RegisterRequest(
+                        "Ana",
+                        "Pérez",
+                        "12345678",
+                        LocalDate.of(1998, 5, 20),
+                        "987654321",
+                        "ana@example.com",
+                        "clave-segura")))
                 .isInstanceOf(RegistrationDisabledException.class);
         verify(userRepository, never()).existsByEmail(any());
     }
@@ -148,5 +204,11 @@ class AuthServiceTest {
                 new LoginRequest("ana@example.com", "incorrecta")))
                 .isInstanceOf(BadCredentialsException.class);
         verify(jwtService, never()).generateToken(any());
+    }
+
+    private void setId(User user, Long id) throws Exception {
+        Field field = User.class.getDeclaredField("id");
+        field.setAccessible(true);
+        field.set(user, id);
     }
 }

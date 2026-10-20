@@ -9,6 +9,8 @@ import com.mediturno.backend.auth.dto.UserSummary;
 import com.mediturno.backend.auth.exception.EmailAlreadyRegisteredException;
 import com.mediturno.backend.auth.exception.RegistrationDisabledException;
 import com.mediturno.backend.auth.security.JwtService;
+import com.mediturno.backend.patient.domain.Patient;
+import com.mediturno.backend.patient.repository.PatientRepository;
 import com.mediturno.backend.user.domain.User;
 import com.mediturno.backend.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +26,7 @@ import org.hibernate.exception.ConstraintViolationException;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final PatientRepository patientRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -31,11 +34,13 @@ public class AuthService {
 
     public AuthService(
             UserRepository userRepository,
+            PatientRepository patientRepository,
             PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager,
             JwtService jwtService,
             @Value("${app.auth.registration-enabled:true}") boolean registrationEnabled) {
         this.userRepository = userRepository;
+        this.patientRepository = patientRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
@@ -53,13 +58,19 @@ public class AuthService {
             throw new EmailAlreadyRegisteredException();
         }
 
-        User patient = User.createPatient(
+        User user = User.createPatient(
                 request.firstName().trim(),
                 request.lastName().trim(),
                 email,
                 passwordEncoder.encode(request.password()));
         try {
-            return createResponse(userRepository.saveAndFlush(patient));
+            User savedUser = userRepository.saveAndFlush(user);
+            patientRepository.saveAndFlush(Patient.create(
+                    savedUser,
+                    request.documentNumber().trim(),
+                    request.birthDate(),
+                    request.phone().trim()));
+            return createResponse(savedUser);
         } catch (DataIntegrityViolationException exception) {
             if (isEmailUniqueConstraintViolation(exception)) {
                 throw new EmailAlreadyRegisteredException();

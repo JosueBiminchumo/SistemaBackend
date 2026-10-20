@@ -1,30 +1,29 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import RegisterForm from '../../components/auth/RegisterForm';
+import { register } from '../../services/authService';
 import './PublicPages.css';
 
 export default function RegisterPage() {
-  const handleRegister = (patient) => {
-    const patients = JSON.parse(
-      localStorage.getItem('patients') || '[]'
-    );
+  const navigate = useNavigate();
 
-    const newPatient = {
-      ...patient,
-      id:
-        patients.length > 0
-          ? Math.max(
-              ...patients.map((currentPatient) => currentPatient.id)
-            ) + 1
-          : 1,
-    };
+  const handleRegister = async (patient) => {
+    const response = await register(patient);
+    const user = response.user;
 
-    patients.push(newPatient);
-
-    localStorage.setItem('patients', JSON.stringify(patients));
     localStorage.setItem(
-      'mediturn_registered_patient',
-      JSON.stringify(newPatient)
+      'mediturn_user',
+      JSON.stringify({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role: user.role,
+        dashboardPath: '/paciente',
+        isLocal: false,
+      })
     );
+    navigate('/paciente/perfil');
   };
 
   return (

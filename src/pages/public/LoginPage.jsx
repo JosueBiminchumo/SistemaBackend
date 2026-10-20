@@ -7,7 +7,9 @@ export default function LoginPage() {
 
   const handleLogin = (user) => {
     localStorage.setItem('mediturn_user', JSON.stringify(user));
-    localStorage.setItem('token', `local-token-${user.role}`);
+    if (user.isLocal) {
+      localStorage.setItem('token', `local-token-${user.role}`);
+    }
     navigate(user.dashboardPath);
   };
 

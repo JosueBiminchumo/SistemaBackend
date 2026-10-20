@@ -7,6 +7,8 @@ import java.util.Map;
 import com.mediturno.backend.auth.exception.EmailAlreadyRegisteredException;
 import com.mediturno.backend.auth.exception.RegistrationDisabledException;
 import com.mediturno.backend.common.dto.ApiError;
+import com.mediturno.backend.patient.exception.DocumentNumberAlreadyRegisteredException;
+import com.mediturno.backend.patient.exception.PatientProfileNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -42,6 +44,20 @@ public class GlobalExceptionHandler {
             EmailAlreadyRegisteredException exception,
             HttpServletRequest request) {
         return error(HttpStatus.CONFLICT, exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(DocumentNumberAlreadyRegisteredException.class)
+    public ResponseEntity<ApiError> handleDuplicateDocumentNumber(
+            DocumentNumberAlreadyRegisteredException exception,
+            HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(PatientProfileNotFoundException.class)
+    public ResponseEntity<ApiError> handlePatientProfileNotFound(
+            PatientProfileNotFoundException exception,
+            HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, exception.getMessage(), request, Map.of());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

@@ -1,11 +1,14 @@
 package com.mediturno.backend.auth.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mediturno.backend.patient.repository.PatientRepository;
 import com.mediturno.backend.user.domain.User;
 import com.mediturno.backend.user.domain.UserRole;
 import com.mediturno.backend.user.repository.UserRepository;
@@ -32,6 +35,9 @@ class AuthApiIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private PatientRepository patientRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -39,6 +45,7 @@ class AuthApiIntegrationTest {
 
     @BeforeEach
     void clearUsers() {
+        patientRepository.deleteAll();
         userRepository.deleteAll();
     }
 
@@ -47,7 +54,7 @@ class AuthApiIntegrationTest {
         MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"clave-segura"}
+                                {"firstName":"Ana","lastName":"Pérez","documentNumber":"12345678","birthDate":"1998-05-20","phone":"987654321","email":"ana@example.com","password":"clave-segura"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.user.role").value("PATIENT"))
@@ -58,6 +65,16 @@ class AuthApiIntegrationTest {
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
         org.assertj.core.api.Assertions.assertThat(body.has("passwordHash")).isFalse();
         org.assertj.core.api.Assertions.assertThat(body.toString()).doesNotContain("clave-segura");
+        org.assertj.core.api.Assertions.assertThat(patientRepository.findAll())
+                .singleElement()
+                .satisfies(patient -> {
+                    org.assertj.core.api.Assertions.assertThat(patient.getUserId())
+                            .isEqualTo(body.get("user").get("id").asLong());
+                    org.assertj.core.api.Assertions.assertThat(patient.getDocumentNumber()).isEqualTo("12345678");
+                    org.assertj.core.api.Assertions.assertThat(patient.getBirthDate().toString())
+                            .isEqualTo("1998-05-20");
+                    org.assertj.core.api.Assertions.assertThat(patient.getPhone()).isEqualTo("987654321");
+                });
     }
 
     @Test
@@ -65,10 +82,39 @@ class AuthApiIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"clave-segura","role":"ADMIN"}
+                                {"firstName":"Ana","lastName":"Pérez","documentNumber":"12345678","birthDate":"1998-05-20","phone":"987654321","email":"ana@example.com","password":"clave-segura","role":"ADMIN"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.user.role").value("PATIENT"));
+    }
+
+    @Test
+    void readsAndUpdatesPatientProfileWithTheAuthenticatedUser() throws Exception {
+        String token = registerAndGetToken("ana@example.com");
+
+        mockMvc.perform(get("/api/v1/patients/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentNumber").value("12345678"))
+                .andExpect(jsonPath("$.birthDate").value("1998-05-20"))
+                .andExpect(jsonPath("$.phone").value("987654321"));
+
+        mockMvc.perform(put("/api/v1/patients/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"documentNumber":"87654321","birthDate":"1997-04-10","phone":"912345678"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentNumber").value("87654321"))
+                .andExpect(jsonPath("$.birthDate").value("1997-04-10"))
+                .andExpect(jsonPath("$.phone").value("912345678"));
+    }
+
+    @Test
+    void requiresAuthenticationToReadPatientProfile() throws Exception {
+        mockMvc.perform(get("/api/v1/patients/me"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -78,7 +124,7 @@ class AuthApiIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Otra","lastName":"Persona","email":"ana@example.com","password":"clave-segura"}
+                                {"firstName":"Otra","lastName":"Persona","documentNumber":"87654321","birthDate":"1998-05-20","phone":"987654321","email":"ana@example.com","password":"clave-segura"}
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409));
@@ -151,10 +197,43 @@ class AuthApiIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new RegistrationPayload("Ana", "Pérez", email, "clave-segura"))))
+                                new RegistrationPayload(
+                                        "Ana",
+                                        "Pérez",
+                                        "12345678",
+                                        "1998-05-20",
+                                        "987654321",
+                                        email,
+                                        "clave-segura"))))
                 .andExpect(status().isCreated());
     }
 
-    private record RegistrationPayload(String firstName, String lastName, String email, String password) {
+    private String registerAndGetToken(String email) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new RegistrationPayload(
+                                        "Ana",
+                                        "Pérez",
+                                        "12345678",
+                                        "1998-05-20",
+                                        "987654321",
+                                        email,
+                                        "clave-segura"))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("accessToken")
+                .asText();
+    }
+
+    private record RegistrationPayload(
+            String firstName,
+            String lastName,
+            String documentNumber,
+            String birthDate,
+            String phone,
+            String email,
+            String password) {
     }
 }

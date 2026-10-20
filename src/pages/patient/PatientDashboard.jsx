@@ -21,7 +21,7 @@ function getProfile() {
   const storedUser = localStorage.getItem('mediturn_user');
   const storedPatients = localStorage.getItem('patients');
 
-  if (!storedUser || !storedPatients) {
+  if (!storedUser) {
     return {
       firstName: 'Paciente',
       lastName: '',
@@ -29,6 +29,21 @@ function getProfile() {
   }
 
   const currentUser = JSON.parse(storedUser);
+  const token = localStorage.getItem('token');
+  if (currentUser.isLocal === false || (token && !token.startsWith('local-token-'))) {
+    return {
+      firstName: currentUser.firstName || currentUser.name?.split(' ')[0] || 'Paciente',
+      lastName: currentUser.lastName || currentUser.name?.split(' ').slice(1).join(' ') || '',
+    };
+  }
+
+  if (!storedPatients) {
+    return {
+      firstName: 'Paciente',
+      lastName: '',
+    };
+  }
+
   const patients = JSON.parse(storedPatients);
 
   return (

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { getPatientProfile, updatePatientProfile } from '../../services/patientService';
 import './PatientProfilePage.css';
 
-function getProfile() {
+function getLocalProfile() {
   const storedUser = localStorage.getItem('mediturn_user');
   const storedPatients = localStorage.getItem('patients');
 
@@ -14,23 +15,99 @@ function getProfile() {
   const currentUser = JSON.parse(storedUser);
   const patients = JSON.parse(storedPatients);
 
-  return patients.find(
+  const profile = patients.find(
     (patient) => patient.id === currentUser.id
   );
+  return profile
+    ? { ...profile, documentNumber: profile.documentNumber || profile.document || '' }
+    : null;
+}
+
+function hasApiSession() {
+  const token = localStorage.getItem('token');
+  return Boolean(token && !token.startsWith('local-token-'));
+}
+
+function cacheProfile(profile, saveLocalProfile = true) {
+  const cachedProfile = {
+    ...profile,
+    document: profile.documentNumber,
+  };
+  if (saveLocalProfile) {
+    const patients = JSON.parse(localStorage.getItem('patients') || '[]');
+    localStorage.setItem(
+      'patients',
+      JSON.stringify([
+        ...patients.filter((patient) => patient.id !== cachedProfile.id),
+        cachedProfile,
+      ])
+    );
+    localStorage.setItem('mediturn_registered_patient', JSON.stringify(cachedProfile));
+  }
+  return cachedProfile;
 }
 
 export default function PatientProfilePage() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(getProfile);
+  const [isRemoteProfile] = useState(hasApiSession);
+  const [profile, setProfile] = useState(() =>
+    isRemoteProfile ? null : getLocalProfile()
+  );
+  const [savedProfile, setSavedProfile] = useState(() =>
+    isRemoteProfile ? null : getLocalProfile()
+  );
+  const [isLoading, setIsLoading] = useState(isRemoteProfile);
+  const [loadError, setLoadError] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  useEffect(() => {
+    if (!isRemoteProfile) {
+      return;
+    }
+
+    let isMounted = true;
+    getPatientProfile()
+      .then((response) => {
+        if (!isMounted) {
+          return;
+        }
+        const loadedProfile = cacheProfile(response, false);
+        setProfile(loadedProfile);
+        setSavedProfile(loadedProfile);
+      })
+      .catch((error) => {
+        if (isMounted) {
+          setLoadError(error.message || 'No se pudo cargar el perfil.');
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isRemoteProfile]);
+
+  if (isLoading) {
+    return (
+      <main className="patient-profile-page">
+        <section className="patient-profile-container">
+          <p role="status">Cargando perfil...</p>
+        </section>
+      </main>
+    );
+  }
 
   if (!profile) {
     return (
       <main className="patient-profile-page">
         <section className="patient-profile-container">
           <h1>Perfil no encontrado</h1>
-          <p>No se encontró la información del paciente actual.</p>
+          <p>{loadError || 'No se encontró la información del paciente actual.'}</p>
         </section>
       </main>
     );
@@ -48,13 +125,10 @@ export default function PatientProfilePage() {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const storedPatients = localStorage.getItem('patients');
-    const patients = JSON.parse(storedPatients || '[]');
-
-    if (currentPassword || newPassword) {
+    if (!isRemoteProfile && (currentPassword || newPassword)) {
       if (!currentPassword || !newPassword) {
         Swal.fire({
           title: 'Completa los campos',
@@ -89,48 +163,47 @@ export default function PatientProfilePage() {
       }
     }
 
-    const profileToSave = {
-      ...profile,
-      ...(newPassword ? { password: newPassword } : {}),
-    };
+    try {
+      const profileToSave = isRemoteProfile
+        ? cacheProfile(await updatePatientProfile({
+            documentNumber: profile.documentNumber.trim(),
+            birthDate: profile.birthDate,
+            phone: profile.phone.trim(),
+          }), false)
+        : cacheProfile({
+            ...profile,
+            ...(newPassword ? { password: newPassword } : {}),
+          });
 
-    const updatedPatients = patients.map((patient) =>
-      patient.id === profileToSave.id ? profileToSave : patient
-    );
+      setProfile(profileToSave);
+      setSavedProfile(profileToSave);
+      setCurrentPassword('');
+      setNewPassword('');
 
-    localStorage.setItem(
-      'patients',
-      JSON.stringify(updatedPatients)
-    );
-
-    const registeredPatient = JSON.parse(
-      localStorage.getItem('mediturn_registered_patient') || 'null'
-    );
-
-    if (registeredPatient && registeredPatient.id === profileToSave.id) {
-      localStorage.setItem(
-        'mediturn_registered_patient',
-        JSON.stringify(profileToSave)
-      );
+      await Swal.fire({
+        title: 'Perfil actualizado',
+        text: 'Tus datos se guardaron correctamente.',
+        icon: 'success',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#2563eb',
+      });
+    } catch (error) {
+      await Swal.fire({
+        title: 'No se pudo actualizar el perfil',
+        text: error.message || 'Inténtalo nuevamente.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#2563eb',
+      });
     }
-
-    setProfile(profileToSave);
-
-    setProfile(profileToSave);
-    setCurrentPassword('');
-    setNewPassword('');
-
-    Swal.fire({
-      title: 'Perfil actualizado',
-      text: 'Tus datos se guardaron correctamente.',
-      icon: 'success',
-      confirmButtonText: 'Aceptar',
-      confirmButtonColor: '#2563eb',
-    });
   };
 
   const handleCancel = () => {
-    setProfile(getProfile());
+    if (isRemoteProfile) {
+      setProfile(savedProfile);
+    } else {
+      setProfile(getLocalProfile());
+    }
     setCurrentPassword('');
     setNewPassword('');
   };
@@ -200,9 +273,11 @@ export default function PatientProfilePage() {
 
                 <input
                   id="document"
-                  name="document"
+                  name="documentNumber"
+                  inputMode="numeric"
+                  maxLength="8"
                   type="text"
-                  value={profile.document || profile.documentNumber || ''}
+                  value={profile.documentNumber || profile.document || ''}
                   onChange={handleChange}
                   required
                 />
@@ -233,6 +308,8 @@ export default function PatientProfilePage() {
                 <input
                   id="phone"
                   name="phone"
+                  inputMode="numeric"
+                  maxLength="9"
                   type="tel"
                   value={profile.phone || ''}
                   onChange={handleChange}
@@ -254,45 +331,46 @@ export default function PatientProfilePage() {
                   value={profile.email || ''}
                   onChange={handleChange}
                   required
+                  readOnly={isRemoteProfile}
                 />
               </div>
             </div>
 
-            <hr className="profile-divider" />
+            {!isRemoteProfile && (
+              <>
+                <hr className="profile-divider" />
 
-            <h2>Cambiar contraseña</h2>
+                <h2>Cambiar contraseña</h2>
 
-            <div className="profile-form-row">
-              <div className="profile-field">
-                <label htmlFor="current-password">
-                  Contraseña actual
-                </label>
+                <div className="profile-form-row">
+                  <div className="profile-field">
+                    <label htmlFor="current-password">
+                      Contraseña actual
+                    </label>
 
-                <input
-                  id="current-password"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(event) =>
-                    setCurrentPassword(event.target.value)
-                  }
-                />
-              </div>
+                    <input
+                      id="current-password"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(event) => setCurrentPassword(event.target.value)}
+                    />
+                  </div>
 
-              <div className="profile-field">
-                <label htmlFor="new-password">
-                  Nueva contraseña
-                </label>
+                  <div className="profile-field">
+                    <label htmlFor="new-password">
+                      Nueva contraseña
+                    </label>
 
-                <input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(event) =>
-                    setNewPassword(event.target.value)
-                  }
-                />
-              </div>
-            </div>
+                    <input
+                      id="new-password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="profile-actions">
               <button

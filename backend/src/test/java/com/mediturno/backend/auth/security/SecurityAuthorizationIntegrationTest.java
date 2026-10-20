@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mediturno.backend.patient.repository.PatientRepository;
 import com.mediturno.backend.user.domain.User;
 import com.mediturno.backend.user.domain.UserRole;
 import com.mediturno.backend.user.repository.UserRepository;
@@ -33,6 +34,9 @@ class SecurityAuthorizationIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private PatientRepository patientRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -43,6 +47,7 @@ class SecurityAuthorizationIntegrationTest {
 
     @BeforeEach
     void clearUsers() {
+        patientRepository.deleteAll();
         userRepository.deleteAll();
     }
 
@@ -113,7 +118,7 @@ class SecurityAuthorizationIntegrationTest {
         MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"clave-segura"}
+                                {"firstName":"Ana","lastName":"Pérez","documentNumber":"12345678","birthDate":"1998-05-20","phone":"987654321","email":"ana@example.com","password":"clave-segura"}
                                 """))
                 .andExpect(status().isCreated())
                 .andReturn();

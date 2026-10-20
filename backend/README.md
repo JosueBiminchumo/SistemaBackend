@@ -38,6 +38,8 @@ mvn test
 
 - `POST /api/v1/auth/register`: crea una cuenta `PATIENT` si el registro está habilitado.
 - `POST /api/v1/auth/login`: valida credenciales y devuelve un JWT.
+- `GET /api/v1/patients/me`: devuelve el perfil del paciente autenticado.
+- `PUT /api/v1/patients/me`: actualiza DNI, fecha de nacimiento y teléfono.
 - Las rutas `/api/v1/admin/**`, `/api/v1/doctors/**` y `/api/v1/patients/**`
   requieren respectivamente `ADMIN`, `DOCTOR` o `PATIENT` (también se permite
   `ADMIN` en las rutas de los otros roles).
@@ -53,6 +55,9 @@ Ejemplo de registro:
 {
   "firstName": "Ana",
   "lastName": "Pérez",
+  "documentNumber": "12345678",
+  "birthDate": "1998-05-20",
+  "phone": "987654321",
   "email": "ana@example.com",
   "password": "una-clave-segura"
 }

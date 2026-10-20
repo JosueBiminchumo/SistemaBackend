@@ -19,21 +19,24 @@ function parseJwt(token) {
 export const login = async (credentials) => {
   try {
     const { data } = await api.post('/auth/login', credentials);
-    if (data?.token) {
-      localStorage.setItem('token', data.token);
+    if (data?.accessToken) {
+      localStorage.setItem('token', data.accessToken);
     }
     return data;
   } catch (error) {
-    throw new Error(error.message || 'Error al iniciar sesión');
+    throw new Error(error.message || 'Error al iniciar sesión', { cause: error });
   }
 };
 
 export const register = async (userData) => {
   try {
     const { data } = await api.post('/auth/register', userData);
+    if (data?.accessToken) {
+      localStorage.setItem('token', data.accessToken);
+    }
     return data;
   } catch (error) {
-    throw new Error(error.message || 'Error al registrar usuario');
+    throw new Error(error.message || 'Error al registrar usuario', { cause: error });
   }
 };
 

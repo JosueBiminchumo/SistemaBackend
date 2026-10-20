@@ -20,6 +20,7 @@ export default function RegisterForm({ onRegister }) {
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (event) => {
     const { name, type, checked, value } = event.target;
@@ -29,7 +30,7 @@ export default function RegisterForm({ onRegister }) {
       [name]: type === 'checkbox' ? checked : value,
     }));
 
-    setErrors((current) => ({ ...current, [name]: '' }));
+    setErrors((current) => ({ ...current, [name]: '', form: '' }));
     setSuccess('');
   };
 
@@ -79,7 +80,7 @@ export default function RegisterForm({ onRegister }) {
     return nextErrors;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     const nextErrors = validate();
@@ -97,15 +98,21 @@ export default function RegisterForm({ onRegister }) {
       phone: values.phone.trim(),
       email: values.email.trim().toLowerCase(),
       password: values.password,
-      role: 'paciente',
     };
 
-    onRegister(patient);
-
-    setValues(initialValues);
-    setSuccess(
-      'Registro realizado correctamente. Ya puedes iniciar sesion.'
-    );
+    setIsSubmitting(true);
+    try {
+      await onRegister(patient);
+      setValues(initialValues);
+      setSuccess('Registro realizado correctamente. Ya puedes iniciar sesión.');
+    } catch (error) {
+      setErrors((current) => ({
+        ...current,
+        form: error.message || 'No se pudo completar el registro.',
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -113,6 +120,11 @@ export default function RegisterForm({ onRegister }) {
       {success && (
         <p className="form-alert form-alert--success">
           {success}
+        </p>
+      )}
+      {errors.form && (
+        <p className="form-alert form-alert--error" role="alert">
+          {errors.form}
         </p>
       )}
 
@@ -263,9 +275,10 @@ export default function RegisterForm({ onRegister }) {
 
       <button
         className="button button--primary button--full"
+        disabled={isSubmitting}
         type="submit"
       >
-        Crear cuenta
+        {isSubmitting ? 'Creando cuenta...' : 'Crear cuenta'}
       </button>
     </form>
   );

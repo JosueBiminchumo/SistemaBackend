@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mediturno.backend.patient.repository.PatientRepository;
 import com.mediturno.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,8 +26,12 @@ class RegistrationDisabledIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PatientRepository patientRepository;
+
     @BeforeEach
     void clearUsers() {
+        patientRepository.deleteAll();
         userRepository.deleteAll();
     }
 
@@ -35,7 +40,7 @@ class RegistrationDisabledIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Ana","lastName":"Pérez","email":"ana@example.com","password":"clave-segura"}
+                                {"firstName":"Ana","lastName":"Pérez","documentNumber":"12345678","birthDate":"1998-05-20","phone":"987654321","email":"ana@example.com","password":"clave-segura"}
                                 """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("El registro público está deshabilitado."));
