@@ -18,7 +18,7 @@
     <description>API backend para la plataforma MediTurno</description>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <h2.version>2.2.224</h2.version>
         <jjwt.version>0.12.6</jjwt.version>
     </properties>
