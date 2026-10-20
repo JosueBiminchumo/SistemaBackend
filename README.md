@@ -1,2 +1,0 @@
-# SistemaBackend
-Repositorio del backend
