@@ -6,7 +6,7 @@ identidad, autenticación y autorización para los roles `ADMIN`, `DOCTOR` y
 
 ## Requisitos
 
-- Java 21
+- Java 25 (LTS)
 - Maven 3.9+
 - MySQL 8+
 
