@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mediturno.backend.patient.repository.PatientRepository;
 import com.mediturno.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,8 +26,12 @@ class RegistrationDisabledIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PatientRepository patientRepository;
+
     @BeforeEach
     void clearUsers() {
+        patientRepository.deleteAll();
         userRepository.deleteAll();
     }
 
