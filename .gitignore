@@ -1,6 +1,7 @@
 target/
 .maven-cache/
+.env
+*.log
+*.iml
 .idea/
 .vscode/
-*.iml
-.env
