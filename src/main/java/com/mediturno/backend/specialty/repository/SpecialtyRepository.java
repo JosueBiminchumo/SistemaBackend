@@ -1,6 +1,6 @@
-package com.mediturn.specialty.repository;
+package com.mediturno.backend.specialty.repository;
 
-import com.mediturn.specialty.entity.Specialty;
+import com.mediturno.backend.specialty.entity.Specialty;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

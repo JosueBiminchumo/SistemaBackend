@@ -1,4 +1,4 @@
-package com.mediturn.specialty.entity;
+package com.mediturno.backend.specialty.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

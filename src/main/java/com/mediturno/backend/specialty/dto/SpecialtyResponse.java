@@ -1,4 +1,4 @@
-package com.mediturn.specialty.dto;
+package com.mediturno.backend.specialty.dto;
 
 import java.time.Instant;
 

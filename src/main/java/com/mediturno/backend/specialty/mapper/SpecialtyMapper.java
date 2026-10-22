@@ -1,7 +1,7 @@
-package com.mediturn.specialty.mapper;
+package com.mediturno.backend.specialty.mapper;
 
-import com.mediturn.specialty.dto.SpecialtyResponse;
-import com.mediturn.specialty.entity.Specialty;
+import com.mediturno.backend.specialty.dto.SpecialtyResponse;
+import com.mediturno.backend.specialty.entity.Specialty;
 
 public final class SpecialtyMapper {
 

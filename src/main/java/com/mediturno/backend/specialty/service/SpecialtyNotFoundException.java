@@ -1,4 +1,4 @@
-package com.mediturn.specialty.service;
+package com.mediturno.backend.specialty.service;
 
 public class SpecialtyNotFoundException extends RuntimeException {
 

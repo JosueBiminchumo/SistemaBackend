@@ -1,10 +1,10 @@
-package com.mediturn.specialty.service;
+package com.mediturno.backend.specialty.service;
 
-import com.mediturn.specialty.dto.SpecialtyRequest;
-import com.mediturn.specialty.dto.SpecialtyResponse;
-import com.mediturn.specialty.entity.Specialty;
-import com.mediturn.specialty.mapper.SpecialtyMapper;
-import com.mediturn.specialty.repository.SpecialtyRepository;
+import com.mediturno.backend.specialty.dto.SpecialtyRequest;
+import com.mediturno.backend.specialty.dto.SpecialtyResponse;
+import com.mediturno.backend.specialty.entity.Specialty;
+import com.mediturno.backend.specialty.mapper.SpecialtyMapper;
+import com.mediturno.backend.specialty.repository.SpecialtyRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
