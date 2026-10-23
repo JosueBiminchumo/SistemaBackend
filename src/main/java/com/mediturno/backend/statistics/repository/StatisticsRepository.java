@@ -51,6 +51,19 @@ public class StatisticsRepository {
                 row.getDate("bucket_date").toLocalDate().toString(), row.getLong("total")));
     }
 
+    public List<StatisticsBucket> countBySpecialty(StatisticsRange range) {
+        return jdbc.query("""
+                SELECT s.name AS label, COUNT(*) AS total
+                FROM citas a
+                JOIN doctors d ON d.id = a.doctor_id
+                JOIN specialties s ON s.id = d.specialty_id
+                WHERE a.start_at >= :startAt AND a.start_at < :endBefore
+                GROUP BY s.id, s.name
+                ORDER BY total DESC, s.name ASC, s.id ASC
+                """, parameters(range), (row, index) ->
+                new StatisticsBucket(row.getString("label"), row.getLong("total")));
+    }
+
     private MapSqlParameterSource parameters(StatisticsRange range) {
         return new MapSqlParameterSource()
                 .addValue("startAt", Timestamp.valueOf(range.startAt()))
