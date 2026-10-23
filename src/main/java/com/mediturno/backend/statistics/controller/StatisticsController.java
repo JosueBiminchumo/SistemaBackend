@@ -1,6 +1,7 @@
 package com.mediturno.backend.statistics.controller;
 
 import com.mediturno.backend.common.dto.ApiResponse;
+import com.mediturno.backend.statistics.dto.AppointmentSeriesResponse;
 import com.mediturno.backend.statistics.dto.DashboardStatisticsResponse;
 import com.mediturno.backend.statistics.service.StatisticsService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,5 +34,18 @@ public class StatisticsController {
             @RequestParam(name = "to", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ApiResponse.ok(service.dashboard(from, to));
+    }
+
+    @GetMapping("/appointments")
+    @Operation(summary = "Consultar series de citas",
+            description = "groupBy admite day, status o specialty. Devuelve labels y values "
+                    + "alineados con conteos, no porcentajes. Los dias sin citas se completan con cero.")
+    public ApiResponse<AppointmentSeriesResponse> appointments(
+            @RequestParam(name = "groupBy", defaultValue = "day") String groupBy,
+            @RequestParam(name = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(name = "to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ApiResponse.ok(service.appointments(groupBy, from, to));
     }
 }
