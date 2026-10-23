@@ -61,6 +61,29 @@ class SpecialtyServiceTest {
     }
 
     @Test
+    void getByIdReturnsSpecialtyWhenFound() {
+        Specialty s1 = new Specialty("Cardiología", "Desc 1", true);
+        when(specialtyRepository.findById(1L)).thenReturn(Optional.of(s1));
+
+        SpecialtyResponse response = specialtyService.getById(1L);
+
+        assertThat(response.name()).isEqualTo("Cardiología");
+        assertThat(response.description()).isEqualTo("Desc 1");
+        verify(specialtyRepository).findById(1L);
+    }
+
+    @Test
+    void getByIdThrowsWhenNotFound() {
+        when(specialtyRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> specialtyService.getById(99L))
+                .isInstanceOf(SpecialtyNotFoundException.class)
+                .hasMessage("La especialidad no existe");
+
+        verify(specialtyRepository).findById(99L);
+    }
+
+    @Test
     void createNormalizesNameAndSavesSuccessfully() {
         SpecialtyRequest request = new SpecialtyRequest("   Cardiología    Clínica   ", "  Atención médica  ", null);
         when(specialtyRepository.existsByNameIgnoreCase("Cardiología Clínica")).thenReturn(false);

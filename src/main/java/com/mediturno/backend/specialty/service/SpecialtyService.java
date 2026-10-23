@@ -27,6 +27,10 @@ public class SpecialtyService {
         return specialties.stream().map(SpecialtyMapper::toResponse).toList();
     }
 
+    public SpecialtyResponse getById(Long id) {
+        return SpecialtyMapper.toResponse(findById(id));
+    }
+
     @Transactional
     public SpecialtyResponse create(SpecialtyRequest request) {
         String name = normalize(request.name());

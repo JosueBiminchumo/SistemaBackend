@@ -90,6 +90,25 @@ class SpecialtyApiIntegrationTest {
     }
 
     @Test
+    void getSpecialtyByIdIsPubliclyAccessible() throws Exception {
+        Specialty saved = specialtyRepository.save(new Specialty("Otorrinolaringología", "Oído, nariz y garganta", true));
+
+        mockMvc.perform(get("/api/v1/specialties/" + saved.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(saved.getId()))
+                .andExpect(jsonPath("$.name").value("Otorrinolaringología"))
+                .andExpect(jsonPath("$.description").value("Oído, nariz y garganta"))
+                .andExpect(jsonPath("$.active").value(true));
+    }
+
+    @Test
+    void getSpecialtyByIdRejectsNonExistentId() throws Exception {
+        mockMvc.perform(get("/api/v1/specialties/999999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("La especialidad no existe"));
+    }
+
+    @Test
     void createSpecialtyRequiresAdminRole() throws Exception {
         String body = """
                 {"name":"Neurología","description":"Sistema nervioso","active":true}

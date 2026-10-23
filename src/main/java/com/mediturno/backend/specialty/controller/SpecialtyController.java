@@ -33,6 +33,11 @@ public class SpecialtyController {
         return specialtyService.list(active);
     }
 
+    @GetMapping("/{id}")
+    public SpecialtyResponse getById(@PathVariable Long id) {
+        return specialtyService.getById(id);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public SpecialtyResponse create(@Valid @RequestBody SpecialtyRequest request) {
