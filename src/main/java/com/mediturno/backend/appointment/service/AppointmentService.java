@@ -1,6 +1,8 @@
 package com.mediturno.backend.appointment.service;
 
 import com.mediturno.backend.appointment.domain.Appointment;
+import com.mediturno.backend.appointment.domain.AppointmentStatus;
+import com.mediturno.backend.appointment.dto.AppointmentStatusRequest;
 import com.mediturno.backend.appointment.dto.AppointmentUpdateRequest;
 import com.mediturno.backend.appointment.dto.AppointmentPage;
 import com.mediturno.backend.appointment.dto.AppointmentRequest;
@@ -162,6 +164,33 @@ public class AppointmentService {
         appointment.reschedule(startAt, endAt, request.reason(), LocalDateTime.now(clock));
         return toResponse(saveOrConflict(appointment));
     }
+        // ================= CANCELAR Y CAMBIAR ESTADO (commit 14) =================
+
+    @Transactional
+    public AppointmentResponse cancel(Long id) {
+        Appointment appointment = findOrThrow(id);
+        assertParticipantOrAdmin(appointment, actorProvider.current());
+        return toResponse(applyTransition(appointment, AppointmentStatus.CANCELLED));
+    }
+
+    @Transactional
+    public AppointmentResponse changeStatus(Long id, AppointmentStatusRequest request) {
+        Appointment appointment = findOrThrow(id);
+        AppointmentActor actor = actorProvider.current();
+
+        // El paciente solo cancela (endpoint /cancel); no confirma ni completa
+        if (actor.role() == ActorRole.PATIENT) {
+            throw new AppointmentAccessDeniedException("El paciente solo puede cancelar su cita");
+        }
+        assertParticipantOrAdmin(appointment, actor);
+
+        AppointmentStatus target = request.status();
+        if (target == AppointmentStatus.COMPLETED
+                && appointment.getStartAt().isAfter(LocalDateTime.now(clock))) {
+            throw new AppointmentRuleException("No se puede completar una cita que aun no ha comenzado");
+        }
+        return toResponse(applyTransition(appointment, target));
+    }
     // ================= HELPERS =================
 
     private PatientRef requirePatient(AppointmentActor actor) {
@@ -237,7 +266,16 @@ public class AppointmentService {
             throw new AppointmentConflictException("El horario acaba de ser reservado por otra persona");
         }
     }
-
+    /** Valida la transicion con el enum y guarda. Una cita CANCELLED libera el horario. */
+    private Appointment applyTransition(Appointment appointment, AppointmentStatus target) {
+        if (!appointment.getStatus().canTransitionTo(target)) {
+            throw new AppointmentConflictException(
+                    "No se puede pasar de " + appointment.getStatus() + " a " + target);
+        }
+        appointment.changeStatus(target, LocalDateTime.now(clock));
+        return appointmentRepository.saveAndFlush(appointment);
+    }
+    
     private AppointmentResponse toResponse(Appointment appointment) {
         PatientRef patient = patientDirectory.findById(appointment.getPatientId()).orElse(null);
         DoctorRef doctor = doctorDirectory.findById(appointment.getDoctorId()).orElse(null);
