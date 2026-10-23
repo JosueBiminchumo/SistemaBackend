@@ -64,3 +64,13 @@ El registro responde `201 Created` y crea siempre el rol `PATIENT`; un campo
 correo ya registrado.
 
 La política de CORS y la documentación Swagger se coordinan con el integrante 7.
+
+## Estadisticas administrativas
+
+El integrante 6 agrega consultas de datos persistidos, exclusivas para `ADMIN`:
+
+- `GET /api/v1/statistics/dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `GET /api/v1/statistics/appointments?groupBy=day|status|specialty&from=YYYY-MM-DD&to=YYYY-MM-DD`
+
+El [contrato de estadisticas](docs/estadisticas.md) describe fechas UTC,
+respuestas, conteos, permisos, pruebas y dependencias para la integracion.
