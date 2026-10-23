@@ -159,8 +159,8 @@ limites inclusivos, fechas extremas, UTC, datos vacios, varios estados,
 historial inactivo, joins y permisos mediante JWT reales. El fixture solo
 existe en `src/test/resources` y cada prueba revierte sus datos.
 
-La validacion con una instancia MySQL del equipo queda pendiente. Si esa
-base ejecuto el `V3` antiguo de la rama de citas, debe coordinarse su
+El modulo tambien se valido contra MySQL 8.0.46 en una instancia temporal.
+Si la base del equipo ejecuto el `V3` antiguo de la rama de citas, debe coordinarse su
 migracion con el integrante 7: el `V3` de configuracion tiene otras claves
 foraneas y otro checksum. Esta rama conserva ese historial.
 
@@ -169,6 +169,9 @@ del PR a `dev`, revisar tambien que el numero `V4` siga disponible. La
 implementacion de estadisticas consulta el esquema compartido y puede
 funcionar sin duplicar sus entidades.
 
-Validacion realizada el 23 de octubre de 2026 con Java 21:
-`mvn clean verify` completo 117 pruebas sin fallos ni errores y genero el
-JAR ejecutable. Incluye 39 pruebas de la base y 78 del modulo de estadisticas.
+Validacion ampliada el 23 de octubre de 2026 con Java 21:
+`mvn clean verify` completo 131 pruebas sin fallos ni errores y genero el
+JAR ejecutable. Incluye 39 pruebas de la base y 92 del modulo de estadisticas.
+Las 92 pruebas del modulo tambien pasan en MySQL con zonas JVM Lima y Tokio.
+El [informe de pruebas](pruebas-estadisticas.md) detalla los casos y las
+comprobaciones HTTP sobre el JAR.
