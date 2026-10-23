@@ -12,13 +12,14 @@ final class AppointmentErrorFactory {
     }
 
     static ResponseEntity<ApiError> build(HttpStatus status, String message, HttpServletRequest request) {
+        // AJUSTAR al constructor/metodo real de tu ApiError
         ApiError body = new ApiError(
-                Instant.now(), 
-                status.value(), 
+                Instant.now(),
+                status.value(),
                 status.getReasonPhrase(),
-                message, 
-                request.getRequestURI(), 
-                null // <-- Agregado para satisfacer los 6 campos del record ApiError
+                message,
+                request.getRequestURI(),
+                null // Puedes agregar detalles adicionales si es necesario
         );
         return ResponseEntity.status(status).body(body);
     }

@@ -23,4 +23,4 @@ public class AppointmentMapper {
                 appointment.getReason(),
                 appointment.getCreatedAt());
     }
-} 
+}
