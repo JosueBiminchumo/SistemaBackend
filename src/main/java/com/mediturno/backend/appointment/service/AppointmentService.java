@@ -1,6 +1,7 @@
 package com.mediturno.backend.appointment.service;
 
 import com.mediturno.backend.appointment.domain.Appointment;
+import com.mediturno.backend.appointment.dto.AppointmentUpdateRequest;
 import com.mediturno.backend.appointment.dto.AppointmentPage;
 import com.mediturno.backend.appointment.dto.AppointmentRequest;
 import com.mediturno.backend.appointment.dto.AppointmentResponse;
@@ -132,7 +133,35 @@ public class AppointmentService {
         assertParticipantOrAdmin(appointment, actorProvider.current());
         return toResponse(appointment);
     }
+    // ================= REPROGRAMAR (commit 13) =================
 
+    @Transactional
+    public AppointmentResponse reschedule(Long id, AppointmentUpdateRequest request) {
+        Appointment appointment = findOrThrow(id);
+        AppointmentActor actor = actorProvider.current();
+
+        // El medico no reprograma: puede confirmar o cancelar
+        if (actor.role() == ActorRole.DOCTOR) {
+            throw new AppointmentAccessDeniedException(
+                    "El medico no reprograma citas; puede confirmarlas o cancelarlas");
+        }
+        assertParticipantOrAdmin(appointment, actor);
+
+        if (!appointment.getStatus().isOpen()) {
+            throw new AppointmentConflictException("Solo se pueden reprogramar citas pendientes o confirmadas");
+        }
+
+        // Mismas reglas que al reservar
+        LocalDateTime startAt = normalize(request.startAt());
+        validateAdvance(startAt);
+        LocalDateTime endAt = startAt.plusMinutes(slotMinutes(appointment.getDoctorId(), startAt));
+
+        // excludeId = la propia cita, para que no choque consigo misma
+        assertSlotFree(appointment.getDoctorId(), appointment.getPatientId(), startAt, endAt, appointment.getId());
+
+        appointment.reschedule(startAt, endAt, request.reason(), LocalDateTime.now(clock));
+        return toResponse(saveOrConflict(appointment));
+    }
     // ================= HELPERS =================
 
     private PatientRef requirePatient(AppointmentActor actor) {
