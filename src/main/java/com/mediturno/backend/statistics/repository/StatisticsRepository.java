@@ -2,6 +2,7 @@ package com.mediturno.backend.statistics.repository;
 
 import com.mediturno.backend.statistics.service.StatisticsRange;
 import java.sql.Timestamp;
+import java.util.List;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -26,6 +27,17 @@ public class StatisticsRepository {
                 """, parameters(range), (row, index) -> new StatisticsTotals(
                 row.getLong("appointments"), row.getLong("patients"),
                 row.getLong("doctors"), row.getLong("specialties")));
+    }
+
+    public List<StatisticsBucket> countByStatus(StatisticsRange range) {
+        return jdbc.query("""
+                SELECT status AS label, COUNT(*) AS total
+                FROM citas
+                WHERE start_at >= :startAt AND start_at < :endBefore
+                GROUP BY status
+                ORDER BY status
+                """, parameters(range), (row, index) ->
+                new StatisticsBucket(row.getString("label"), row.getLong("total")));
     }
 
     private MapSqlParameterSource parameters(StatisticsRange range) {
