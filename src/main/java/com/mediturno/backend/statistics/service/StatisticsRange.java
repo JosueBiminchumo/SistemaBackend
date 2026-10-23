@@ -29,6 +29,9 @@ public record StatisticsRange(LocalDate from, LocalDate to) {
     }
 
     public static StatisticsRange resolve(LocalDate from, LocalDate to, Clock clock) {
+        if (to != null && (to.isBefore(MIN_DATE) || to.isAfter(MAX_DATE))) {
+            throw new InvalidStatisticsQueryException("Las fechas estan fuera del rango admitido.");
+        }
         LocalDate end = to == null ? LocalDate.now(clock.withZone(ZoneOffset.UTC)) : to;
         LocalDate start = from == null ? end.minusDays(29) : from;
         return new StatisticsRange(start, end);

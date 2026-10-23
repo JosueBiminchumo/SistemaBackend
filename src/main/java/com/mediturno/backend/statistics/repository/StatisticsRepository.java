@@ -1,7 +1,6 @@
 package com.mediturno.backend.statistics.repository;
 
 import com.mediturno.backend.statistics.service.StatisticsRange;
-import java.sql.Timestamp;
 import java.util.List;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -66,7 +65,7 @@ public class StatisticsRepository {
 
     private MapSqlParameterSource parameters(StatisticsRange range) {
         return new MapSqlParameterSource()
-                .addValue("startAt", Timestamp.valueOf(range.startAt()))
-                .addValue("endBefore", Timestamp.valueOf(range.endBefore()));
+                .addValue("startAt", range.startAt())
+                .addValue("endBefore", range.endBefore());
     }
 }
