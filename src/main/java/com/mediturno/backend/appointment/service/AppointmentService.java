@@ -1,6 +1,5 @@
 package com.mediturno.backend.appointment.service;
-import com.mediturno.backend.appointment.exception.AppointmentConflictException;
-import org.springframework.dao.DataIntegrityViolationException;
+
 import com.mediturno.backend.appointment.domain.Appointment;
 import com.mediturno.backend.appointment.dto.AppointmentRequest;
 import com.mediturno.backend.appointment.dto.AppointmentResponse;
@@ -22,6 +21,8 @@ import java.time.temporal.ChronoUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.mediturno.backend.appointment.exception.AppointmentConflictException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 public class AppointmentService {
@@ -73,34 +74,9 @@ public class AppointmentService {
                 patient.id(), doctor.id(), startAt, endAt, request.reason().trim(), LocalDateTime.now(clock)));
         return toResponse(saved);
     }
-
     // ---------- helpers ----------
 
-        private void assertSlotFree(Long doctorId, Long patientId,
-                                LocalDateTime startAt, LocalDateTime endAt, Long excludeId) {
-        boolean doctorBusy = excludeId == null
-                ? appointmentRepository.existsDoctorOverlap(doctorId, startAt, endAt)
-                : appointmentRepository.existsDoctorOverlapExcluding(doctorId, startAt, endAt, excludeId);
-        if (doctorBusy) {
-            throw new AppointmentConflictException("El medico ya tiene una cita en ese horario");
-        }
-        boolean patientBusy = excludeId == null
-                ? appointmentRepository.existsPatientOverlap(patientId, startAt, endAt)
-                : appointmentRepository.existsPatientOverlapExcluding(patientId, startAt, endAt, excludeId);
-        if (patientBusy) {
-            throw new AppointmentConflictException("El paciente ya tiene una cita en ese horario");
-        }
-    }
-
-    /** La clave unica active_slot_key cubre la carrera entre dos reservas casi simultaneas. */
-    private Appointment saveOrConflict(Appointment appointment) {
-        try {
-            return appointmentRepository.saveAndFlush(appointment);
-        } catch (DataIntegrityViolationException ex) {
-            throw new AppointmentConflictException("El horario acaba de ser reservado por otra persona");
-        }
-    }
-
+    
     private PatientRef requirePatient(AppointmentActor actor) {
         return patientDirectory.findByUserId(actor.userId())
                 .orElseThrow(() -> new AppointmentAccessDeniedException("El usuario no tiene perfil de paciente"));
@@ -131,5 +107,30 @@ public class AppointmentService {
         PatientRef patient = patientDirectory.findById(appointment.getPatientId()).orElse(null);
         DoctorRef doctor = doctorDirectory.findById(appointment.getDoctorId()).orElse(null);
         return mapper.toResponse(appointment, patient, doctor);
+    }
+
+        private void assertSlotFree(Long doctorId, Long patientId,
+                                LocalDateTime startAt, LocalDateTime endAt, Long excludeId) {
+        boolean doctorBusy = excludeId == null
+                ? appointmentRepository.existsDoctorOverlap(doctorId, startAt, endAt)
+                : appointmentRepository.existsDoctorOverlapExcluding(doctorId, startAt, endAt, excludeId);
+        if (doctorBusy) {
+            throw new AppointmentConflictException("El medico ya tiene una cita en ese horario");
+        }
+        boolean patientBusy = excludeId == null
+                ? appointmentRepository.existsPatientOverlap(patientId, startAt, endAt)
+                : appointmentRepository.existsPatientOverlapExcluding(patientId, startAt, endAt, excludeId);
+        if (patientBusy) {
+            throw new AppointmentConflictException("El paciente ya tiene una cita en ese horario");
+        }
+    }
+
+    /** La clave unica active_slot_key cubre la carrera entre dos reservas casi simultaneas. */
+    private Appointment saveOrConflict(Appointment appointment) {
+        try {
+            return appointmentRepository.saveAndFlush(appointment);
+        } catch (DataIntegrityViolationException ex) {
+            throw new AppointmentConflictException("El horario acaba de ser reservado por otra persona");
+        }
     }
 }
