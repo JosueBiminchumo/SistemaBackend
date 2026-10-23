@@ -1,5 +1,9 @@
 package com.mediturno.backend.appointment.controller;
 
+import com.mediturno.backend.appointment.dto.AppointmentStatusRequest;
+import com.mediturno.backend.appointment.dto.AppointmentUpdateRequest;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import com.mediturno.backend.appointment.domain.AppointmentStatus;
 import com.mediturno.backend.appointment.dto.AppointmentPage;
 import com.mediturno.backend.appointment.dto.AppointmentRequest;
@@ -53,5 +57,22 @@ public class AppointmentController {
     @GetMapping("/{id}")
     public AppointmentResponse getById(@PathVariable("id") Long id) {
         return appointmentService.getById(id);
+    }
+
+        @PutMapping("/{id}")
+    public AppointmentResponse reschedule(@PathVariable("id") Long id,
+                                          @Valid @RequestBody AppointmentUpdateRequest request) {
+        return appointmentService.reschedule(id, request);
+    }
+
+    @PatchMapping("/{id}/cancel")
+    public AppointmentResponse cancel(@PathVariable("id") Long id) {
+        return appointmentService.cancel(id);
+    }
+
+    @PatchMapping("/{id}/status")
+    public AppointmentResponse changeStatus(@PathVariable("id") Long id,
+                                            @Valid @RequestBody AppointmentStatusRequest request) {
+        return appointmentService.changeStatus(id, request);
     }
 }
