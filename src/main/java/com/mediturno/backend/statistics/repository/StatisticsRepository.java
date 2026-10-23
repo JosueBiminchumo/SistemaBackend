@@ -40,6 +40,17 @@ public class StatisticsRepository {
                 new StatisticsBucket(row.getString("label"), row.getLong("total")));
     }
 
+    public List<StatisticsBucket> countByDay(StatisticsRange range) {
+        return jdbc.query("""
+                SELECT CAST(start_at AS DATE) AS bucket_date, COUNT(*) AS total
+                FROM citas
+                WHERE start_at >= :startAt AND start_at < :endBefore
+                GROUP BY CAST(start_at AS DATE)
+                ORDER BY bucket_date
+                """, parameters(range), (row, index) -> new StatisticsBucket(
+                row.getDate("bucket_date").toLocalDate().toString(), row.getLong("total")));
+    }
+
     private MapSqlParameterSource parameters(StatisticsRange range) {
         return new MapSqlParameterSource()
                 .addValue("startAt", Timestamp.valueOf(range.startAt()))
