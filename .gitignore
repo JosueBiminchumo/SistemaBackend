@@ -4,3 +4,5 @@ target/
 *.iml
 .idea/
 .vscode/
+.env.local
+application-local.yml
