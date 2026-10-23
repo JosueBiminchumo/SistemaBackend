@@ -1,6 +1,7 @@
 package com.mediturno.backend.statistics.repository;
 
 import com.mediturno.backend.statistics.service.StatisticsRange;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -47,7 +48,7 @@ public class StatisticsRepository {
                 GROUP BY CAST(start_at AS DATE)
                 ORDER BY bucket_date
                 """, parameters(range), (row, index) -> new StatisticsBucket(
-                row.getDate("bucket_date").toLocalDate().toString(), row.getLong("total")));
+                row.getObject("bucket_date", LocalDate.class).toString(), row.getLong("total")));
     }
 
     public List<StatisticsBucket> countBySpecialty(StatisticsRange range) {
