@@ -1,33 +1,43 @@
 package com.mediturno.backend.appointment.adapter;
 
 import com.mediturno.backend.appointment.port.PatientDirectory;
-import com.mediturno.backend.patient.domain.Patient;
-import com.mediturno.backend.patient.repository.PatientRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
+/** Conecta citas con el modulo de pacientes (Integrante 2) consultando su entidad Patient. */
 @Component
 public class PatientDirectoryAdapter implements PatientDirectory {
 
-    private final PatientRepository patientRepository;
-
-    public PatientDirectoryAdapter(PatientRepository patientRepository) {
-        this.patientRepository = patientRepository;
-    }
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<PatientRef> findByUserId(Long userId) {
-        return patientRepository.findByUserId(userId).map(this::toRef);   // AJUSTAR (punto 3)
+        return first("select p from Patient p where p.user.id = :id", userId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<PatientRef> findById(Long patientId) {
-        return patientRepository.findById(patientId).map(this::toRef);
+        return first("select p from Patient p where p.id = :id", patientId);
     }
 
-    private PatientRef toRef(Patient patient) {
-        // AJUSTAR (punto 4): de donde sale el nombre completo
-        String fullName = patient.getUser().getFirstName() + " " + patient.getUser().getLastName();
-        return new PatientRef(patient.getId(), fullName);
+    private Optional<PatientRef> first(String jpql, Long id) {
+        List<?> rows = entityManager.createQuery(jpql)
+                .setParameter("id", id)
+                .setMaxResults(1)
+                .getResultList();
+        return rows.isEmpty() ? Optional.empty() : Optional.of(toRef(rows.get(0)));
+    }
+
+    private PatientRef toRef(Object patient) {
+        Long patientId = EntityReader.asLong(EntityReader.call(patient, "getId"));
+        String name = EntityReader.fullName(EntityReader.call(patient, "getUser"));
+        return new PatientRef(patientId, name != null ? name : "Paciente " + patientId);
     }
 }

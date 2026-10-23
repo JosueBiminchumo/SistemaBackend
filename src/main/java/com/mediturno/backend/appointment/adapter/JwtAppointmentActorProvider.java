@@ -4,15 +4,23 @@ import com.mediturno.backend.appointment.exception.AppointmentUnauthenticatedExc
 import com.mediturno.backend.appointment.port.ActorRole;
 import com.mediturno.backend.appointment.port.AppointmentActor;
 import com.mediturno.backend.appointment.port.AppointmentActorProvider;
-import com.mediturno.backend.user.domain.User;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.util.List;
+import java.util.Locale;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+/** Entrega el usuario y el rol del JWT ya validado por JwtAuthenticationFilter. */
 @Component
 public class JwtAppointmentActorProvider implements AppointmentActorProvider {
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     public AppointmentActor current() {
@@ -20,23 +28,56 @@ public class JwtAppointmentActorProvider implements AppointmentActorProvider {
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
             throw new AppointmentUnauthenticatedException("Se requiere iniciar sesion");
         }
-        // AJUSTAR (punto 1 y 2 de la lista): tipo del principal y getter del id
-        if (!(auth.getPrincipal() instanceof User user)) {
+        return new AppointmentActor(resolveUserId(auth), resolveRole(auth));
+    }
+
+    /** 1) Si el principal expone getId() se usa; 2) si no, se busca por el correo (username). */
+    private Long resolveUserId(Authentication auth) {
+        Object principal = auth.getPrincipal();
+        Long id = EntityReader.asLong(EntityReader.call(principal, "getId"));
+        if (id != null) {
+            return id;
+        }
+        String username = principal instanceof UserDetails details ? details.getUsername() : auth.getName();
+        if (username == null || username.isBlank()) {
             throw new AppointmentUnauthenticatedException("Sesion invalida");
         }
-        return new AppointmentActor(user.getId(), resolveRole(auth));
+        List<?> rows = entityManager
+                .createQuery("select u.id from User u where lower(u.email) = :email")
+                .setParameter("email", username.toLowerCase(Locale.ROOT))
+                .setMaxResults(1)
+                .getResultList();
+        Long found = rows.isEmpty() ? null : EntityReader.asLong(rows.get(0));
+        if (found == null) {
+            throw new AppointmentUnauthenticatedException("No se encontro al usuario de la sesion");
+        }
+        return found;
     }
 
     private ActorRole resolveRole(Authentication auth) {
         for (GrantedAuthority authority : auth.getAuthorities()) {
-            String name = authority.getAuthority();
-            String normalized = name.startsWith("ROLE_") ? name.substring(5) : name;
-            try {
-                return ActorRole.valueOf(normalized);
-            } catch (IllegalArgumentException ignored) {
-                // authority que no es un rol de MediTurno
+            ActorRole role = toRole(authority.getAuthority());
+            if (role != null) {
+                return role;
             }
         }
         throw new AppointmentUnauthenticatedException("El usuario no tiene un rol valido");
+    }
+
+    /** Acepta ROLE_ADMIN o ADMIN, y tambien los nombres en espanol. */
+    private ActorRole toRole(String authority) {
+        if (authority == null) {
+            return null;
+        }
+        String name = authority.toUpperCase(Locale.ROOT);
+        if (name.startsWith("ROLE_")) {
+            name = name.substring(5);
+        }
+        return switch (name) {
+            case "ADMIN", "ADMINISTRADOR" -> ActorRole.ADMIN;
+            case "DOCTOR", "MEDICO" -> ActorRole.DOCTOR;
+            case "PATIENT", "PACIENTE" -> ActorRole.PATIENT;
+            default -> null;
+        };
     }
 }
